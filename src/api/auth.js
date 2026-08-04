@@ -1,0 +1,149 @@
+import { requestFirstAvailable } from './http'
+
+const AUTH_TOKEN_KEY = 'ecommerce.auth.token'
+const USER_KEY = 'ecommerce.auth.user'
+
+export function getStoredToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY)
+}
+
+export function getStoredUser() {
+  const raw = localStorage.getItem(USER_KEY)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw)
+    const parsedId = Number(parsed?.id)
+
+    return {
+      ...parsed,
+      id: Number.isFinite(parsedId) && parsedId > 0 ? parsedId : null,
+    }
+  } catch {
+    return null
+  }
+}
+
+export function clearSession() {
+  localStorage.removeItem(AUTH_TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
+}
+
+export function persistSession(token, user) {
+  localStorage.setItem(AUTH_TOKEN_KEY, token)
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
+}
+
+function extractUserId(data) {
+  const candidateId = data?.userId ?? data?.id ?? data?.usuario?.id ?? data?.user?.id
+  const parsedId = Number(candidateId)
+  return Number.isFinite(parsedId) && parsedId > 0 ? parsedId : null
+}
+
+function extractUserName(data, email) {
+  const candidateName =
+    data?.userName ??
+    data?.name ??
+    data?.nome ??
+    data?.usuario?.name ??
+    data?.usuario?.nome ??
+    data?.user?.name ??
+    data?.user?.nome
+
+  if (candidateName && String(candidateName).trim()) {
+    return String(candidateName).trim()
+  }
+
+  return email.split('@')[0] || 'Cliente'
+}
+
+export async function loginApi(credentials) {
+  const email = (credentials?.email || '').trim().toUpperCase()
+  const senha = credentials?.password || ''
+
+  const data = await requestFirstAvailable(
+    ['/user/login'],
+    {
+      method: 'POST',
+      query: { email, senha },
+    },
+  )
+
+  const token = data?.token || data?.accessToken || data?.jwt || data
+  const normalizedRole = (credentials?.role || 'CUSTOMER').toUpperCase()
+  const user = {
+    id: extractUserId(data),
+    name: extractUserName(data, email),
+    email,
+    role: normalizedRole === 'ADMIN' ? 'ADMIN' : 'CUSTOMER',
+  }
+
+  if (!token) {
+    throw new Error('Resposta de login sem token. Verifique o backend.')
+  }
+
+  persistSession(token, user)
+  return { token, user }
+}
+
+export async function registerApi(payload) {
+  await requestFirstAvailable(['/user/insert'], {
+    method: 'POST',
+    body: {
+      nome: payload.name,
+      email: (payload.email || '').trim().toUpperCase(),
+      senha: payload.password,
+      role: (payload.role || 'CUSTOMER').toUpperCase(),
+      ativo: true,
+    },
+  })
+}
+
+export async function requestPasswordResetApi(email) {
+  const data = await requestFirstAvailable(['/user/email-redefinir-senha'], {
+    method: 'POST',
+    query: {
+      email: (email || '').trim().toUpperCase(),
+    },
+  })
+
+  if (typeof data === 'string') {
+    return data
+  }
+
+  return 'Se o e-mail existir, o backend enviara o token de recuperacao.'
+}
+
+export async function resetPasswordApi({ token, password }) {
+  await requestFirstAvailable(['/user/redefinir-senha'], {
+    method: 'POST',
+    query: {
+      token: (token || '').trim(),
+      senha: password || '',
+    },
+  })
+}
+
+export async function fetchUserNameById(userId) {
+  const normalizedId = Number(userId)
+  if (!Number.isFinite(normalizedId) || normalizedId <= 0) {
+    return null
+  }
+
+  const data = await requestFirstAvailable([`/user/${normalizedId}/nome`], {
+    token: getStoredToken(),
+  })
+
+  if (typeof data === 'string') {
+    return data.trim() || null
+  }
+
+  if (data && typeof data === 'object') {
+    const candidate = data.nome || data.name || data.userName
+    if (candidate) {
+      return String(candidate).trim() || null
+    }
+  }
+
+  return null
+}
