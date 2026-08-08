@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/backend': {
-        target: 'http://localhost:8080',
+        target: 'https://entirely-outlet-resolved-utc.trycloudflare.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/backend/, ''),
       },

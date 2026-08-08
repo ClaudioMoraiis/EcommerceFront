@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { API_BASE_URL } from '../api/http'
 import {
   createCategory,
   createProduct,
@@ -451,7 +452,7 @@ export function AdminPage() {
                 {parseImageIds(productForm.images).map((imageId) => (
                   <figure key={imageId} className="admin-image-preview-item">
                     <img
-                      src={`/backend/produto-imagem/produto/${editingProductId}/images/${imageId}`}
+                      src={`${API_BASE_URL}/produto-imagem/produto/${editingProductId}/images/${imageId}`}
                       alt={`Imagem ${imageId} do produto`}
                     />
                     <figcaption>ID {imageId}</figcaption>

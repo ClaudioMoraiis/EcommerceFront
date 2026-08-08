@@ -160,7 +160,7 @@ export function ProductDetailsPage() {
         return image
       }
 
-      return `/backend/produto-imagem/produto/${product.id}/images/${image}`
+      return `${API_BASE_URL}/produto-imagem/produto/${product.id}/images/${image}`
     })
     : [product.imageUrl || product.image || fallbackImage]
   const safeImageIndex = Math.min(activeImageIndex, productImages.length - 1)

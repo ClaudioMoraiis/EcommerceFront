@@ -1,4 +1,4 @@
-import { ApiError, requestFirstAvailable } from './http'
+import { ApiError, API_BASE_URL, requestFirstAvailable } from './http'
 import { getStoredToken } from './auth'
 
 function tryParseJson(text) {
@@ -16,7 +16,7 @@ function normalizeProduct(product) {
 
   const firstImageId = Array.isArray(product.images) ? product.images[0] : null
   const imageUrl = firstImageId
-    ? `/backend/produto-imagem/produto/${product.id}/images/${firstImageId}`
+    ? `${API_BASE_URL}/produto-imagem/produto/${product.id}/images/${firstImageId}`
     : null
 
   return {
@@ -220,7 +220,7 @@ export async function uploadProductImage(productId, file) {
 
   const token = getStoredToken()
   const headers = token ? { Authorization: `Bearer ${token}` } : {}
-  const response = await fetch(`/backend/produto-imagem/produto/${productId}/images`, {
+  const response = await fetch(`${API_BASE_URL}/produto-imagem/produto/${productId}/images`, {
     method: 'POST',
     headers,
     body: formData,
