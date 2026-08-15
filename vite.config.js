@@ -1,16 +1,22 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      '/backend': {
-        target: 'https://entirely-outlet-resolved-utc.trycloudflare.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/backend/, ''),
-      },
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const apiBaseUrl = (env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+
+  return {
+    plugins: [react()],
+    server: {
+      proxy: apiBaseUrl
+        ? {
+            '/backend': {
+              target: apiBaseUrl,
+              changeOrigin: true,
+              rewrite: (path) => path.replace(/^\/backend/, ''),
+            },
+          }
+        : undefined,
     },
-  },
+  }
 })
