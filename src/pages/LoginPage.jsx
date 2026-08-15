@@ -1,14 +1,14 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [form, setForm] = useState({
     email: '',
     password: '',
-    role: 'CUSTOMER',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -22,7 +22,10 @@ export function LoginPage() {
     try {
       const session = await login(form)
       const isAdmin = (session?.user?.role || '').toUpperCase() === 'ADMIN'
-      navigate(isAdmin ? '/admin' : '/')
+      const from = location.state?.from
+      const safeFrom =
+        typeof from === 'string' && from.startsWith('/') && from !== '/admin' ? from : '/'
+      navigate(isAdmin ? '/admin' : safeFrom, { replace: true })
     } catch (err) {
       setError(err.message || 'Nao foi possivel entrar.')
     } finally {
@@ -91,16 +94,6 @@ export function LoginPage() {
           </div>
         </label>
 
-        <label>
-          Perfil no front
-          <select
-            value={form.role}
-            onChange={(event) => setForm({ ...form, role: event.target.value })}
-          >
-            <option value="CUSTOMER">Cliente</option>
-            <option value="ADMIN">Administrador</option>
-          </select>
-        </label>
         {error && <p className="error-text">{error}</p>}
 
         <button type="submit" className="btn" disabled={loading}>

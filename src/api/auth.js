@@ -40,6 +40,52 @@ function extractUserId(data) {
   return Number.isFinite(parsedId) && parsedId > 0 ? parsedId : null
 }
 
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== 'string') return null
+
+  const parts = token.split('.')
+  if (parts.length < 2) return null
+
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+    return JSON.parse(atob(padded))
+  } catch {
+    return null
+  }
+}
+
+function normalizeRole(value) {
+  const text = Array.isArray(value) ? value.map(String).join(' ') : String(value || '')
+  return /admin/i.test(text) ? 'ADMIN' : 'CUSTOMER'
+}
+
+function extractRole(data, token) {
+  const candidate =
+    data?.role ??
+    data?.perfil ??
+    data?.tipo ??
+    data?.authorities ??
+    data?.roles ??
+    data?.usuario?.role ??
+    data?.usuario?.perfil ??
+    data?.user?.role ??
+    data?.user?.perfil
+
+  if (candidate !== undefined && candidate !== null && candidate !== '') {
+    return normalizeRole(candidate)
+  }
+
+  const payload = decodeJwtPayload(token)
+  if (payload) {
+    return normalizeRole(
+      payload.role ?? payload.roles ?? payload.authorities ?? payload.perfil ?? payload.tipo,
+    )
+  }
+
+  return 'CUSTOMER'
+}
+
 function extractUserName(data, email) {
   const candidateName =
     data?.userName ??
@@ -70,12 +116,11 @@ export async function loginApi(credentials) {
   )
 
   const token = data?.token || data?.accessToken || data?.jwt || data
-  const normalizedRole = (credentials?.role || 'CUSTOMER').toUpperCase()
   const user = {
     id: extractUserId(data),
     name: extractUserName(data, email),
     email,
-    role: normalizedRole === 'ADMIN' ? 'ADMIN' : 'CUSTOMER',
+    role: extractRole(data, typeof token === 'string' ? token : ''),
   }
 
   if (!token) {
@@ -93,7 +138,7 @@ export async function registerApi(payload) {
       nome: payload.name,
       email: (payload.email || '').trim().toUpperCase(),
       senha: payload.password,
-      role: (payload.role || 'CUSTOMER').toUpperCase(),
+      role: 'CUSTOMER',
       ativo: true,
     },
   })

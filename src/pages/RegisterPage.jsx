@@ -9,7 +9,6 @@ export function RegisterPage() {
     name: '',
     email: '',
     password: '',
-    role: 'CUSTOMER',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -100,17 +99,6 @@ export function RegisterPage() {
               <span className="sr-only">{showPassword ? 'Ocultar senha' : 'Mostrar senha'}</span>
             </button>
           </div>
-        </label>
-
-        <label>
-          Perfil
-          <select
-            value={form.role}
-            onChange={(event) => setForm({ ...form, role: event.target.value })}
-          >
-            <option value="CUSTOMER">Cliente</option>
-            <option value="ADMIN">Administrador</option>
-          </select>
         </label>
 
         {error && <p className="error-text">{error}</p>}
