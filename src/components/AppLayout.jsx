@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
@@ -7,12 +8,30 @@ export function AppLayout() {
   const { isAuthenticated, isAdmin, user, logout } = useAuth()
   const { items } = useCart()
   const { favoriteCount } = useFavorites()
+  const [headerHidden, setHeaderHidden] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0)
 
+  useEffect(() => {
+    const onScroll = () => {
+      const atTop = window.scrollY <= 24
+      setHeaderHidden(!atTop)
+      if (!atTop) {
+        setMobileMenuOpen(false)
+      }
+    }
+
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
     <div className="app-shell">
-      <header className="topbar">
+      <header
+        className={`topbar${headerHidden ? ' is-hidden' : ''}${mobileMenuOpen ? ' is-open' : ''}`}
+      >
         <div className="topbar-main">
           <div className="brand-wrap">
             <Link className="brand" to="/">
@@ -20,6 +39,24 @@ export function AppLayout() {
             </Link>
             <span className="brand-tag">Compre facil, receba rapido</span>
           </div>
+
+          <button
+            type="button"
+            className="menu-toggle"
+            aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            {mobileMenuOpen ? (
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 7H20M4 12H20M4 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
 
           <form className="header-search" onSubmit={(event) => event.preventDefault()}>
             <input
@@ -61,7 +98,7 @@ export function AppLayout() {
           <p className="topbar-note">Frete gratis acima de R$ 299,90 para regioes selecionadas</p>
 
           <div className="header-shortcuts">
-            <button type="button" className="shortcut-btn" aria-label="Notificacoes">
+            <button type="button" className="shortcut-btn shortcut-notify" aria-label="Notificacoes">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 3C9.24 3 7 5.24 7 8V10.8C7 11.48 6.78 12.15 6.37 12.7L5 14.5H19L17.63 12.7C17.22 12.15 17 11.48 17 10.8V8C17 5.24 14.76 3 12 3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M10 18C10.4 19.2 11.1 20 12 20C12.9 20 13.6 19.2 14 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
