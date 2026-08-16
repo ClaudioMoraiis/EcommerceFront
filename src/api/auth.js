@@ -60,7 +60,7 @@ function normalizeRole(value) {
   return /admin/i.test(text) ? 'ADMIN' : 'CUSTOMER'
 }
 
-function extractRole(data, token) {
+function extractBackendRole(data, token) {
   const candidate =
     data?.role ??
     data?.perfil ??
@@ -78,12 +78,26 @@ function extractRole(data, token) {
 
   const payload = decodeJwtPayload(token)
   if (payload) {
-    return normalizeRole(
-      payload.role ?? payload.roles ?? payload.authorities ?? payload.perfil ?? payload.tipo,
-    )
+    const jwtRole =
+      payload.role ?? payload.roles ?? payload.authorities ?? payload.perfil ?? payload.tipo
+    if (jwtRole !== undefined && jwtRole !== null && jwtRole !== '') {
+      return normalizeRole(jwtRole)
+    }
   }
 
-  return 'CUSTOMER'
+  return null
+}
+
+function resolveSessionRole(selectedRole, backendRole) {
+  if (selectedRole === 'ADMIN' && backendRole && backendRole !== 'ADMIN') {
+    throw new Error('Este usuario nao tem perfil ADMIN no backend.')
+  }
+
+  if (selectedRole === 'CUSTOMER') {
+    return 'CUSTOMER'
+  }
+
+  return backendRole || 'ADMIN'
 }
 
 function extractUserName(data, email) {
@@ -106,6 +120,7 @@ function extractUserName(data, email) {
 export async function loginApi(credentials) {
   const email = (credentials?.email || '').trim().toUpperCase()
   const senha = credentials?.password || ''
+  const selectedRole = normalizeRole(credentials?.role || 'CUSTOMER')
 
   const data = await requestFirstAvailable(
     ['/user/login'],
@@ -116,15 +131,18 @@ export async function loginApi(credentials) {
   )
 
   const token = data?.token || data?.accessToken || data?.jwt || data
+
+  if (!token) {
+    throw new Error('Resposta de login sem token. Verifique o backend.')
+  }
+
+  const tokenValue = typeof token === 'string' ? token : ''
+  const role = resolveSessionRole(selectedRole, extractBackendRole(data, tokenValue))
   const user = {
     id: extractUserId(data),
     name: extractUserName(data, email),
     email,
-    role: extractRole(data, typeof token === 'string' ? token : ''),
-  }
-
-  if (!token) {
-    throw new Error('Resposta de login sem token. Verifique o backend.')
+    role,
   }
 
   persistSession(token, user)
@@ -138,7 +156,7 @@ export async function registerApi(payload) {
       nome: payload.name,
       email: (payload.email || '').trim().toUpperCase(),
       senha: payload.password,
-      role: 'CUSTOMER',
+      role: (payload.role || 'CUSTOMER').toUpperCase() === 'ADMIN' ? 'ADMIN' : 'CUSTOMER',
       ativo: true,
     },
   })

@@ -9,6 +9,7 @@ export function LoginPage() {
   const [form, setForm] = useState({
     email: '',
     password: '',
+    role: 'CUSTOMER',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -94,6 +95,16 @@ export function LoginPage() {
           </div>
         </label>
 
+        <label>
+          Perfil
+          <select
+            value={form.role}
+            onChange={(event) => setForm({ ...form, role: event.target.value })}
+          >
+            <option value="CUSTOMER">Cliente</option>
+            <option value="ADMIN">Administrador</option>
+          </select>
+        </label>
         {error && <p className="error-text">{error}</p>}
 
         <button type="submit" className="btn" disabled={loading}>
