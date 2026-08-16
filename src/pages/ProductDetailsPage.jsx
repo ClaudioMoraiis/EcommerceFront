@@ -6,6 +6,7 @@ import {
   fetchProductReviewAverage,
   fetchProductReviews,
 } from '../api/catalog'
+import { API_BASE_URL } from '../api/http'
 import { fetchUserNameById } from '../api/auth'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
